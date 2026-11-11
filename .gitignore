@@ -1,0 +1,9 @@
+node_modules
+.next
+.data
+.env
+.env.local
+public/uploads/*
+!public/uploads/.gitkeep
+*.tsbuildinfo
+.test-build

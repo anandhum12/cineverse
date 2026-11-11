@@ -1,0 +1,320 @@
+// PostgreSQL target schema for CineVerse.
+// Status: DESIGN TARGET. The running app uses the file-backed store in src/lib/server/db.ts,
+// whose documents mirror these models. See docs/ARCHITECTURE.md → "Moving to PostgreSQL".
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role          { USER ADMIN }
+enum AuthProvider  { CREDENTIALS GOOGLE }
+enum MovieStatus   { NOW SOON }
+enum SeatKind      { STANDARD PREMIUM RECLINER VIP }
+enum BookingStatus { PENDING CONFIRMED FAILED EXPIRED CANCELLED }
+enum PaymentStatus { CREATED CAPTURED FAILED REFUNDED }
+enum RefundStatus  { INITIATED PROCESSED FAILED }
+enum Projection    { P180 P360 }
+enum ZoneSide      { ANY LEFT CENTRE RIGHT }
+
+model User {
+  id                String        @id @default(cuid())
+  email             String        @unique
+  name              String
+  passwordHash      String?
+  role              Role          @default(USER)
+  provider          AuthProvider  @default(CREDENTIALS)
+  image             String?
+  // Only method + label; card tokens live at the gateway (Razorpay customer tokens).
+  paymentMethod     String?
+  paymentLabel      String?
+  gatewayCustomerId String?
+  createdAt         DateTime      @default(now())
+  bookings          Booking[]
+  favourites        Favourite[]
+  reviews           Review[]
+}
+
+model Genre {
+  id     String       @id @default(cuid())
+  name   String       @unique
+  movies MovieGenre[]
+}
+
+model Movie {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  title         String
+  tagline       String       @default("")
+  synopsis      String       @default("")
+  durationMin   Int
+  languages     String[]
+  certification String
+  rating        Decimal      @default(0) @db.Decimal(3, 1)
+  ratingSource  String       @default("CineVerse verified audience")
+  votes         Int          @default(0)
+  releaseDate   DateTime     @db.Date
+  status        MovieStatus
+  formats       String[]
+  director      String       @default("")
+  cast          Json         @default("[]") // [{name, role}]
+  crew          Json         @default("[]")
+  posterUrl     String?
+  backdropUrl   String?
+  trailerUrl    String?
+  palette       String[]
+  motif         String
+  trending      Int          @default(50)
+  createdAt     DateTime     @default(now())
+  genres        MovieGenre[]
+  shows         Show[]
+  reviews       Review[]
+  favourites    Favourite[]
+
+  @@index([status, releaseDate])
+}
+
+model MovieGenre {
+  movieId String
+  genreId String
+  movie   Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre   Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  @@id([movieId, genreId])
+}
+
+model Favourite {
+  userId  String
+  movieId String
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie   Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  @@id([userId, movieId])
+}
+
+model City {
+  id       String    @id
+  name     String
+  state    String
+  lat      Float
+  lng      Float
+  theatres Theatre[]
+}
+
+model Theatre {
+  id                String   @id @default(cuid())
+  name              String
+  brand             String   @default("")
+  cityId            String
+  city              City     @relation(fields: [cityId], references: [id])
+  area              String
+  address           String
+  // Theatre location. With PostGIS, add a geography(Point) column + GiST index for radius search.
+  lat               Float
+  lng               Float
+  rating            Decimal  @db.Decimal(2, 1)
+  facilities        String[]
+  cancellationHours Int      @default(2)
+  screens           Screen[]
+
+  @@index([cityId])
+  @@index([lat, lng])
+}
+
+model Screen {
+  id         String           @id @default(cuid())
+  theatreId  String
+  theatre    Theatre          @relation(fields: [theatreId], references: [id])
+  name       String
+  formats    String[]
+  layout     SeatingLayout?
+  shows      Show[]
+  panoramas  TheatrePanorama[]
+  preview3d  PreviewConfig?
+}
+
+/// Screen geometry (metres). Drives seat coordinates, view metrics and the simulated 180° view.
+model SeatingLayout {
+  id                String         @id @default(cuid())
+  screenId          String         @unique
+  screen            Screen         @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  screenWidthM      Float
+  screenHeightM     Float
+  screenElevationM  Float
+  firstRowDistanceM Float
+  rowSpacingM       Float
+  seatWidthM        Float
+  rakeM             Float
+  curvature         Float
+  walkwayDepthM     Float
+  exits             Json           @default("[]") // [{side, rowIndex}]
+  version           Int            @default(1)
+  rows              SeatRow[]
+  categories        SeatCategory[]
+}
+
+model SeatCategory {
+  id       String        @id @default(cuid())
+  layoutId String
+  layout   SeatingLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+  code     String        // e.g. "std", "prm"
+  name     String
+  kind     SeatKind
+  price    Decimal       @db.Decimal(10, 2)
+  rows     SeatRow[]
+  @@unique([layoutId, code])
+}
+
+model SeatRow {
+  id           String        @id @default(cuid())
+  layoutId     String
+  layout       SeatingLayout @relation(fields: [layoutId], references: [id], onDelete: Cascade)
+  label        String
+  position     Int           // 0 = front
+  categoryId   String
+  category     SeatCategory  @relation(fields: [categoryId], references: [id])
+  walkwayAfter Boolean       @default(false)
+  seats        Seat[]
+  @@unique([layoutId, label])
+  @@unique([layoutId, position])
+}
+
+model Seat {
+  id         String  @id @default(cuid())
+  rowId      String
+  row        SeatRow @relation(fields: [rowId], references: [id], onDelete: Cascade)
+  number     Int
+  col        Int     // cell index including aisle gaps
+  label      String  // e.g. "H12"; stable public id
+  accessible Boolean @default(false)
+  @@unique([rowId, number])
+  @@index([label])
+}
+
+model TheatrePanorama {
+  id            String     @id @default(cuid())
+  screenId      String
+  screen        Screen     @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  url           String
+  projection    Projection
+  zoneRows      String[]
+  zoneSide      ZoneSide   @default(ANY)
+  yawOffsetDeg  Float      @default(0)
+  capturedAt    DateTime
+  label         String
+  createdAt     DateTime   @default(now())
+  @@index([screenId])
+}
+
+model PreviewConfig {
+  id          String  @id @default(cuid())
+  screenId    String  @unique
+  screen      Screen  @relation(fields: [screenId], references: [id], onDelete: Cascade)
+  glbModelUrl String? // optional captured 3D environment
+  wallColor   String?
+  ceiling     String? // "stars" | "panels"
+  extra       Json    @default("{}")
+}
+
+model Show {
+  id          String        @id @default(cuid())
+  movieId     String
+  movie       Movie         @relation(fields: [movieId], references: [id])
+  screenId    String
+  screen      Screen        @relation(fields: [screenId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime      // startsAt + runtime + cleaning; used for overlap exclusion constraint
+  language    String
+  format      String
+  priceFactor Decimal       @default(1) @db.Decimal(4, 2)
+  cancelled   Boolean       @default(false)
+  bookings    Booking[]
+  seats       BookingSeat[]
+
+  @@index([screenId, startsAt])
+  @@index([movieId, startsAt])
+  // Add in SQL: EXCLUDE USING gist (screen_id WITH =, tstzrange(starts_at, ends_at) WITH &&) WHERE (NOT cancelled)
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  code        String        @unique
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  showId      String
+  show        Show          @relation(fields: [showId], references: [id])
+  status      BookingStatus @default(PENDING)
+  seatLabels  String[]      // immutable history (BookingSeat rows are deleted on cancel/expiry)
+  subtotal    Decimal       @db.Decimal(10, 2)
+  fee         Decimal       @db.Decimal(10, 2)
+  gstTickets  Decimal       @db.Decimal(10, 2)
+  gstFee      Decimal       @db.Decimal(10, 2)
+  total       Decimal       @db.Decimal(10, 2)
+  expiresAt   DateTime
+  confirmedAt DateTime?
+  cancelledAt DateTime?
+  createdAt   DateTime      @default(now())
+  seats       BookingSeat[]
+  payments    Payment[]
+
+  @@index([userId, createdAt])
+  @@index([showId, status])
+}
+
+/// THE double-booking guard: one row per (show, seat) for confirmed bookings.
+/// Inserted inside the confirmation transaction; a concurrent insert fails with a unique violation.
+model BookingSeat {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  showId    String
+  show      Show    @relation(fields: [showId], references: [id])
+  seatLabel String
+  category  String
+  price     Decimal @db.Decimal(10, 2)
+
+  @@unique([showId, seatLabel])
+  @@index([bookingId])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  bookingId         String
+  booking           Booking       @relation(fields: [bookingId], references: [id])
+  provider          String        // "razorpay" | "sandbox"
+  orderId           String        @unique
+  providerPaymentId String?       @unique // idempotency for verify + webhooks
+  amountPaise       Int
+  currency          String        @default("INR")
+  status            PaymentStatus @default(CREATED)
+  method            String?
+  failureReason     String?
+  refundId          String?
+  refundStatus      RefundStatus?
+  refundAmountPaise Int?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  @@index([bookingId])
+}
+
+model WebhookEvent {
+  id         String   @id // gateway event id
+  receivedAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  movieId   String
+  movie     Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int      // 1–10
+  text      String
+  createdAt DateTime @default(now())
+  @@unique([movieId, userId])
+  @@index([movieId, createdAt])
+}
+
+// Admin users are Users with role = ADMIN (single identity table, RBAC by role).
