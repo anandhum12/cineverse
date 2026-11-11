@@ -69,3 +69,4 @@ All optional except `NEXTAUTH_SECRET`. See `.env.example`.
 Admin → Theatres & screens → *Layout & 180°* → **Real theatre panoramas**. Upload an equirectangular 180° or 360° photo taken from a seat, choose the rows and side it represents, and set the yaw offset so the image's forward direction faces the screen. Seats in that zone then open in **Real photograph** mode with the capture date shown. Every other seat uses the simulation, labelled as such.
 
 More detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+# cineverse
