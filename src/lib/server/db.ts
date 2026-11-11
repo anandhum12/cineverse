@@ -2,7 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import bcrypt from 'bcryptjs';
-import type { Booking, Movie, Panorama, Payment, Review, Screen, Show, Theatre, User } from '../types';
+import type { Data, User } from '../types';
+import { occupiedIn } from '../catalog';
 import { CITIES, generateShows, seedMovies, seedTheatres } from './seed';
 
 /**
@@ -15,20 +16,7 @@ import { CITIES, generateShows, seedMovies, seedTheatres } from './seed';
  * a SERIALIZABLE transaction + UNIQUE(show_id, seat_id) for a single server process.
  * Horizontal scaling requires the Postgres adapter (documented in docs/ARCHITECTURE.md).
  */
-export interface Data {
-  version: number;
-  movies: Movie[];
-  theatres: Theatre[];
-  screens: Screen[];
-  shows: Show[];
-  bookings: Booking[];
-  payments: Payment[];
-  users: User[];
-  panoramas: Panorama[];
-  reviews: Review[];
-  /** processed webhook / payment ids for idempotency */
-  processedEvents: string[];
-}
+export type { Data };
 
 const DATA_VERSION = 3;
 const DIR = path.join(process.cwd(), '.data');
@@ -142,10 +130,7 @@ export function showContext(showId: string) {
 
 /** Seats permanently taken for a show: confirmed bookings + box-office sales. */
 export function occupiedSeats(showId: string, d: Readonly<Data> = db()): Set<string> {
-  const show = d.shows.find((s) => s.id === showId);
-  const set = new Set(show?.soldOffline ?? []);
-  for (const b of d.bookings) if (b.showId === showId && b.status === 'confirmed') b.seatIds.forEach((x) => set.add(x));
-  return set;
+  return occupiedIn(d, showId);
 }
 
 export function publicUser(u: User) {

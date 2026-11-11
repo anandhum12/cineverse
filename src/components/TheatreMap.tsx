@@ -3,7 +3,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { useEffect } from 'react';
-import type { TheatreListing } from '@/lib/server/catalog';
+import type { TheatreListing } from '@/lib/catalog';
 
 const pin = (active: boolean) => L.divIcon({
   className: '',

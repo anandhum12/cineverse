@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/client';
 import { toast } from '@/lib/store';
+import { DEMO } from '@/lib/mode';
+import { loadDemo } from '@/lib/demo/lazy';
 
 export function useAdmin<T>(resource: string, query = '') {
   const [items, setItems] = useState<T[] | null>(null);
@@ -25,6 +27,7 @@ export function useAdmin<T>(resource: string, query = '') {
 }
 
 export async function upload(file: File): Promise<string | null> {
+  if (DEMO) { try { return await (await loadDemo()).demo.upload(file); } catch (e) { toast('error', (e as Error).message); return null; } }
   const fd = new FormData(); fd.append('file', file);
   const r = await fetch('/api/admin/upload', { method: 'POST', body: fd });
   const j = await r.json().catch(() => ({}));

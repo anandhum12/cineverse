@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAppSession } from '@/lib/session';
+import { routes } from '@/lib/routes';
 import { useRouter } from 'next/navigation';
 import type { Movie } from '@/lib/types';
 import { Button } from './ui/Button';
@@ -11,10 +12,10 @@ import { toast } from '@/lib/store';
 export function MovieActions({ movie, initialFav }: { movie: Movie; initialFav: boolean }) {
   const [open, setOpen] = useState(false);
   const [fav, setFav] = useState(initialFav);
-  const { status } = useSession();
+  const { status } = useAppSession();
   const router = useRouter();
   const toggle = async () => {
-    if (status !== 'authenticated') return router.push(`/login?next=/movies/${movie.slug}`);
+    if (status !== 'authenticated') return router.push(routes.login(routes.movie(movie.slug)));
     setFav((f) => !f);
     try { const r = await api<{ favourites: string[] }>('/api/favourites', { method: 'POST', json: { movieId: movie.id } }); setFav(r.favourites.includes(movie.id)); }
     catch (e) { setFav((f) => !f); toast('error', (e as Error).message); }

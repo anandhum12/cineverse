@@ -3,10 +3,14 @@ import type { Data } from './db';
 import { validateLayout } from '../geometry';
 import { layoutTemplate } from './seed';
 import type { SeatLayout } from '../types';
+import { DEMO } from '../mode';
+
+// The Pages demo stores uploads in the browser as data: URLs; the server build never accepts them.
+const okUrl = (v: string) => v.startsWith('/media/') || /^https:\/\//.test(v) || (DEMO && v.startsWith('data:image/'));
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/);
-const url = z.string().max(500).refine((v) => v === '' || v.startsWith('/media/') || /^https:\/\//.test(v), 'Must be an https URL or an uploaded file').nullable().optional();
+const url = z.string().max(DEMO ? 2_200_000 : 500).refine((v) => v === '' || okUrl(v), 'Must be an https URL or an uploaded file').nullable().optional();
 const FORMATS = ['2D', '3D', 'IMAX', 'IMAX 3D', 'Dolby Atmos', '4DX'] as const;
 
 export const MovieSchema = z.object({
@@ -46,7 +50,7 @@ export const ShowSchema = z.object({
 });
 
 export const PanoramaSchema = z.object({
-  screenId: z.string(), url: z.string().refine((v) => v.startsWith('/media/') || v.startsWith('https://'), 'Upload an image first'),
+  screenId: z.string(), url: z.string().refine(okUrl, 'Upload an image first'),
   projection: z.enum(['180', '360']), zone: z.object({ rows: z.array(z.string().regex(/^[A-Z]{1,2}$/)).max(40), side: z.enum(['left', 'centre', 'right', 'any']) }),
   yawOffsetDeg: z.number().min(-180).max(180).default(0), capturedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}/), label: z.string().trim().min(1).max(60),
 });

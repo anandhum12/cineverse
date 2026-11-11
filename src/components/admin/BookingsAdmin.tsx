@@ -6,6 +6,7 @@ import { useAdmin } from './useAdmin';
 import { PageHead, Table } from './ui';
 import { Segmented, Skeleton } from '../ui/misc';
 import { fmtDate, fmtTime, inr } from '@/lib/format';
+import { routes } from '@/lib/routes';
 
 type Row = BookingView & { user: { name?: string; email?: string } };
 export function BookingsAdmin() {
@@ -18,7 +19,7 @@ export function BookingsAdmin() {
         <Table head={['Booking', 'Customer', 'Show', 'Seats', 'Amount', 'Payment', 'Status']}>
           {items.map((b) => (
             <tr key={b.booking.id}>
-              <td className="px-4 py-2 font-mono text-xs">{b.booking.status === 'confirmed' || b.booking.status === 'cancelled' ? <Link href={`/tickets/${b.booking.id}`} className="underline-offset-2 hover:underline">{b.booking.code}</Link> : b.booking.code}<p className="text-white/35">{fmtDate(b.booking.createdAt)} {fmtTime(b.booking.createdAt)}</p></td>
+              <td className="px-4 py-2 font-mono text-xs">{b.booking.status === 'confirmed' || b.booking.status === 'cancelled' ? <Link href={routes.ticket(b.booking.id)} className="underline-offset-2 hover:underline">{b.booking.code}</Link> : b.booking.code}<p className="text-white/35">{fmtDate(b.booking.createdAt)} {fmtTime(b.booking.createdAt)}</p></td>
               <td className="px-4 py-2">{b.user.name}<p className="text-xs text-white/40">{b.user.email}</p></td>
               <td className="px-4 py-2">{b.movie.title}<p className="text-xs text-white/40">{b.theatre.name} · {b.screen.name} · {fmtDate(b.show.startsAt)} {fmtTime(b.show.startsAt)}</p></td>
               <td className="px-4 py-2 text-white/70">{b.booking.seatIds.join(', ')}</td>

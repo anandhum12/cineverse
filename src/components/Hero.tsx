@@ -7,6 +7,7 @@ import { Button } from './ui/Button';
 import { Stars } from './ui/misc';
 import { Trailer } from './Trailer';
 import { runtime } from '@/lib/format';
+import { routes } from '@/lib/routes';
 
 export function Hero({ movies }: { movies: Movie[] }) {
   const [i, setI] = useState(0);
@@ -62,7 +63,7 @@ export function Hero({ movies }: { movies: Movie[] }) {
               <span>{m.genres.join(' · ')}</span><span className="h-1 w-1 rounded-full bg-white/30" /><span>{runtime(m.durationMin)}</span><span className="h-1 w-1 rounded-full bg-white/30" /><span>{m.certification}</span>
             </motion.div>
             <motion.div variants={item} className="mt-8 flex flex-wrap gap-3">
-              <Button href={`/movies/${m.slug}#showtimes`} size="lg" magnetic>Book tickets</Button>
+              <Button href={routes.movie(m.slug, '#showtimes')} size="lg" magnetic>Book tickets</Button>
               <Button variant="glass" size="lg" onClick={() => setTrailer(true)} magnetic>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M7 4.5v15l13-7.5z" /></svg>Watch trailer
               </Button>

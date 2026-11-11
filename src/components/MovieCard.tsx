@@ -5,6 +5,7 @@ import type { Movie } from '@/lib/types';
 import { Poster } from './Poster';
 import { Stars } from './ui/misc';
 import { fmtDate, runtime } from '@/lib/format';
+import { routes } from '@/lib/routes';
 
 export function MovieCard({ movie, index = 0 }: { movie: Movie; index?: number }) {
   const reduce = useReducedMotion();
@@ -26,7 +27,7 @@ export function MovieCard({ movie, index = 0 }: { movie: Movie; index?: number }
         style={reduce ? undefined : { rotateX: rx, rotateY: ry, transformStyle: 'preserve-3d' }}
         whileHover={reduce ? undefined : { scale: 1.05 }} transition={{ type: 'spring', stiffness: 260, damping: 22 }}
         className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-ink-800 shadow-[0_30px_60px_-30px_rgba(0,0,0,.9)] ring-1 ring-white/10">
-        <Link href={`/movies/${movie.slug}`} className="absolute inset-0 focus-ring rounded-2xl" aria-label={`${movie.title} details`}>
+        <Link href={routes.movie(movie.slug)} className="absolute inset-0 focus-ring rounded-2xl" aria-label={`${movie.title} details`}>
           <Poster movie={movie} />
         </Link>
         {/* cinematic light: glare that follows the cursor + violet rim glow */}
@@ -41,7 +42,7 @@ export function MovieCard({ movie, index = 0 }: { movie: Movie; index?: number }
         <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-3 bg-gradient-to-t from-black via-black/85 to-transparent p-3 pt-12 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100">
           <p className="text-[11px] text-white/70">{movie.genres.slice(0, 2).join(' · ')} · {runtime(movie.durationMin)}</p>
           <p className="mt-0.5 text-[11px] text-white/50">{movie.languages.slice(0, 3).join(', ')}{movie.languages.length > 3 ? ' +' : ''}</p>
-          <Link href={`/movies/${movie.slug}${soon ? '' : '#showtimes'}`} className="pointer-events-auto mt-2.5 flex h-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-ink-950 transition hover:bg-neon-violet hover:text-white focus-ring">
+          <Link href={routes.movie(movie.slug, soon ? '' : '#showtimes')} className="pointer-events-auto mt-2.5 flex h-8 items-center justify-center rounded-full bg-white text-[11px] font-bold text-ink-950 transition hover:bg-neon-violet hover:text-white focus-ring">
             {soon ? 'View details' : 'Quick book'}
           </Link>
         </div>

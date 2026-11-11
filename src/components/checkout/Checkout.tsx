@@ -11,6 +11,7 @@ import { Poster } from '../Poster';
 import { Button } from '../ui/Button';
 import { Skeleton } from '../ui/misc';
 import { HoldTimer, useCountdown } from '../booking/HoldTimer';
+import { routes } from '@/lib/routes';
 
 type Data = BookingView & { gateway: { provider: 'razorpay' | 'sandbox'; keyId: string | null; sandbox: boolean }; user: { name: string; email: string }; cancellation: { allowed: boolean; deadline: string; amount: number; hours: number } };
 const METHODS = [
@@ -38,13 +39,13 @@ export function Checkout({ bookingId }: { bookingId: string }) {
   const router = useRouter();
   const left = useCountdown(d ? Date.parse(d.booking.expiresAt) : null);
 
-  useEffect(() => { api<Data>(`/api/bookings/${bookingId}`).then((x) => { setD(x); if (x.booking.status === 'confirmed') router.replace(`/tickets/${bookingId}`); }).catch((e) => setErr(e.message)); }, [bookingId, router]);
+  useEffect(() => { api<Data>(`/api/bookings/${bookingId}`).then((x) => { setD(x); if (x.booking.status === 'confirmed') router.replace(routes.ticket(bookingId)); }).catch((e) => setErr(e.message)); }, [bookingId, router]);
 
   const verify = async (p: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
     setPhase('verifying');
     try {
       await api('/api/payments/verify', { method: 'POST', json: { bookingId, ...p, method } });
-      router.replace(`/tickets/${bookingId}?new=1`);
+      router.replace(routes.ticket(bookingId, true));
     } catch (e) { setPhase('failed'); setFailMsg((e as Error).message); }
   };
   const failed = async (reason: string) => {
@@ -130,7 +131,7 @@ export function Checkout({ bookingId }: { bookingId: string }) {
           </AnimatePresence>
           <div className="mt-6 space-y-3">
             {expired ? (
-              <div className="text-center"><p className="text-sm text-white/60">This hold expired and the seats were released.</p><Button href={`/book/${d.show.id}`} className="mt-3">Choose seats again</Button></div>
+              <div className="text-center"><p className="text-sm text-white/60">This hold expired and the seats were released.</p><Button href={routes.book(d.show.id)} className="mt-3">Choose seats again</Button></div>
             ) : (
               <>
                 <Button size="lg" className="w-full" onClick={() => pay('success')} loading={phase === 'paying' || phase === 'verifying'} magnetic>

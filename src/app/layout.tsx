@@ -7,6 +7,7 @@ import { Ambient } from '@/components/Ambient';
 import { Toaster } from '@/components/ui/misc';
 import { LocationGate } from '@/components/LocationGate';
 import { Footer } from '@/components/Footer';
+import { DemoBanner } from '@/components/DemoBanner';
 
 const display = Syne({ subsets: ['latin'], variable: '--font-display', weight: ['500', '600', '700', '800'], display: 'swap' });
 const body = Manrope({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
@@ -14,7 +15,7 @@ const body = Manrope({ subsets: ['latin'], variable: '--font-body', display: 'sw
 export const metadata: Metadata = {
   title: { default: 'CineVerse — See your seat before you book', template: '%s · CineVerse' },
   description: 'Book cinema tickets with an interactive 3D seat map and a 180° preview of the view from your exact seat.',
-  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXTAUTH_URL || process.env.SITE_URL || 'http://localhost:3000'),
   openGraph: { type: 'website', siteName: 'CineVerse' },
   themeColor: '#04050a',
   viewport: { width: 'device-width', initialScale: 1 },
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main id="main">{children}</main>
           <Footer />
           <LocationGate />
+          <DemoBanner />
           <Toaster />
         </Providers>
       </body>

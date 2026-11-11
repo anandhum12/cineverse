@@ -3,11 +3,13 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useState } from 'react';
-import type { TheatreListing, ShowSlot } from '@/lib/server/catalog';
+import type { TheatreListing, ShowSlot } from '@/lib/catalog';
 import type { Movie } from '@/lib/types';
 import { useLocation } from '@/lib/store';
 import { cx, fmtTime, inr, istDay, timeBucket } from '@/lib/format';
 import { Empty, Segmented, Skeleton } from './ui/misc';
+import { api } from '@/lib/client';
+import { routes } from '@/lib/routes';
 
 const TheatreMap = dynamic(() => import('./TheatreMap'), { ssr: false, loading: () => <Skeleton className="h-full w-full !rounded-3xl" /> });
 
@@ -35,10 +37,10 @@ export function ShowtimeExplorer({ movie, movies }: { movie?: Movie; movies?: Mo
   useEffect(() => {
     if (!loc) return;
     setData(null);
-    const ctrl = new AbortController();
+    let live = true;
     const qs = new URLSearchParams({ city: loc.cityId, date, lat: String(loc.lat), lng: String(loc.lng), ...(movie ? { movie: movie.id } : {}) });
-    fetch(`/api/theatres?${qs}`, { signal: ctrl.signal }).then((r) => r.json()).then((d) => setData(d.theatres)).catch(() => {});
-    return () => ctrl.abort();
+    api<{ theatres: TheatreListing[] }>(`/api/theatres?${qs}`).then((d) => live && setData(d.theatres)).catch(() => live && setData([]));
+    return () => { live = false; };
   }, [loc, date, movie]);
 
   const options = useMemo(() => {
@@ -127,7 +129,7 @@ export function ShowtimeExplorer({ movie, movies }: { movie?: Movie; movies?: Mo
                       <div className="mt-4 space-y-4">
                         {[...new Set(t.shows.map((s) => s.movieId))].map((mid) => {
                           const m = movies?.find((x) => x.id === mid);
-                          return m ? <div key={mid}><Link href={`/movies/${m.slug}`} className="text-sm font-semibold text-white/85 hover:text-white">{m.title} <span className="text-xs font-normal text-white/40">· {m.certification} · {m.genres[0]}</span></Link><Slots shows={t.shows.filter((s) => s.movieId === mid)} /></div> : null;
+                          return m ? <div key={mid}><Link href={routes.movie(m.slug)} className="text-sm font-semibold text-white/85 hover:text-white">{m.title} <span className="text-xs font-normal text-white/40">· {m.certification} · {m.genres[0]}</span></Link><Slots shows={t.shows.filter((s) => s.movieId === mid)} /></div> : null;
                         })}
                       </div>
                     )}
@@ -149,7 +151,7 @@ function Slots({ shows }: { shows: ShowSlot[] }) {
         const ratio = s.available / s.total;
         const tone = ratio < 0.15 ? 'text-rose-300' : ratio < 0.4 ? 'text-amber-300' : 'text-emerald-300';
         return (
-          <Link key={s.id} href={`/book/${s.id}`} className="group relative min-w-[118px] rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-2.5 transition hover:-translate-y-0.5 hover:border-neon-violet/60 hover:bg-neon-violet/10 hover:shadow-glow focus-ring">
+          <Link key={s.id} href={routes.book(s.id)} className="group relative min-w-[118px] rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-2.5 transition hover:-translate-y-0.5 hover:border-neon-violet/60 hover:bg-neon-violet/10 hover:shadow-glow focus-ring">
             <span className="block font-display text-[15px] font-semibold">{fmtTime(s.startsAt)}</span>
             <span className="block text-[10px] uppercase tracking-wider text-white/50">{s.format} · {s.language}</span>
             <span className="mt-1 flex items-center justify-between gap-2 text-[10px]"><span className={tone}>{s.available} left</span><span className="text-white/45">from {inr(s.minPrice)}</span></span>

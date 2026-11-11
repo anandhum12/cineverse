@@ -190,3 +190,19 @@ export interface Review { id: string; movieId: string; userId: string; userName:
 // ─── Live seat state ──────────────────────────────────────────────────────────
 export type SeatState = 'available' | 'occupied' | 'held' | 'mine';
 export interface SeatStateMap { [seatId: string]: SeatState }
+
+// ─── Whole dataset (file store on the server, localStorage in the Pages demo) ─
+export interface Data {
+  version: number;
+  movies: Movie[];
+  theatres: Theatre[];
+  screens: Screen[];
+  shows: Show[];
+  bookings: Booking[];
+  payments: Payment[];
+  users: User[];
+  panoramas: Panorama[];
+  reviews: Review[];
+  /** processed webhook / payment ids for idempotency */
+  processedEvents: string[];
+}

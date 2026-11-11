@@ -8,6 +8,7 @@ import { useAdmin } from './useAdmin';
 import { Field, PageHead } from './ui';
 import { Modal, Skeleton } from '../ui/misc';
 import { Button } from '../ui/Button';
+import { routes } from '@/lib/routes';
 
 const blank = (): Partial<Theatre> => ({ name: '', brand: '', cityId: 'kochi', area: '', address: '', lat: CITIES[0].lat, lng: CITIES[0].lng, rating: 4.2, facilities: ['M-Ticket'], cancellationHours: 2 });
 
@@ -36,7 +37,7 @@ export function TheatresAdmin() {
               {sc.items!.filter((s) => s.theatreId === t.id).map((s) => (
                 <div key={s.id} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2 text-sm">
                   <span><b>{s.name}</b> <span className="text-white/45">· {s.formats.join(', ')} · {computeSeats(s.layout).length} seats · {s.layout.geometry.screenWidthM} m screen</span></span>
-                  <span className="flex gap-1"><Link href={`/admin/screens/${s.id}`} className="chip">Layout & 180°</Link><button onClick={() => sc.remove(s.id)} className="chip text-rose-300">✕</button></span>
+                  <span className="flex gap-1"><Link href={routes.adminScreen(s.id)} className="chip">Layout & 180°</Link><button onClick={() => sc.remove(s.id)} className="chip text-rose-300">✕</button></span>
                 </div>
               ))}
               <button onClick={() => setNewScreen({ theatreId: t.id, name: 'Audi', template: 'multiplex', formats: ['2D'] })} className="w-full rounded-xl border border-dashed border-white/15 py-2 text-xs text-white/50 hover:border-white/30 hover:text-white">+ Add screen</button>

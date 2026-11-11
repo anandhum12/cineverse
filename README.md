@@ -35,6 +35,24 @@ npm run build && npm start
 
 ---
 
+## Live demo on GitHub Pages
+
+GitHub Pages can only serve static files, so the repo also builds a **static demo** of the same app (`src/demo/app` + an in-browser backend in `src/lib/demo/backend.ts`). Everything is clickable, but it works differently from the real server version:
+
+- Bookings, sign-in and admin changes are saved **only in the visitor's browser** (localStorage). Every visitor has their own copy.
+- Payments are simulated and no money moves. QR codes are not verifiable.
+- A "Demo" pill in the corner explains this and can reset the data.
+
+**Deploying:** `.github/workflows/pages.yml` runs the tests, builds the demo and publishes it on every push to `main`. One-time setup: **Settings → Pages → Build and deployment → Source: GitHub Actions**. The site appears at `https://<user>.github.io/<repo>/`.
+
+**Building locally:**
+```bash
+NEXT_PUBLIC_BASE_PATH=/cineverse npm run build:pages     # → ./out
+NEXT_PUBLIC_BASE_PATH=/cineverse npm run preview:pages   # http://localhost:4000/cineverse/
+```
+
+---
+
 ## What's implemented
 
 | Area | Where | Notes |

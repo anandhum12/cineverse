@@ -12,7 +12,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node tests/run.mjs",
-    "reset-data": "rm -rf .data"
+    "reset-data": "rm -rf .data",
+    "build:pages": "node scripts/build-pages.mjs",
+    "preview:pages": "node scripts/preview-pages.mjs"
   },
   "dependencies": {
     "@react-three/drei": "9.92.7",

@@ -2,13 +2,14 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAppSession } from '@/lib/session';
+import { routes } from '@/lib/routes';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Movie, Panorama, Screen, SeatStateMap, Show, Theatre } from '@/lib/types';
 import { computeSeats, viewMetrics, type SeatGeo } from '@/lib/geometry';
 import { priceSeats, seatPrice } from '@/lib/pricing';
-import { api, ApiError } from '@/lib/client';
+import { api, ApiError, subscribeSeats } from '@/lib/client';
 import { fmtDate, fmtTime, inr } from '@/lib/format';
 import { toast, useSeatUI } from '@/lib/store';
 import { SeatMap, SeatLegend } from './SeatMap';
@@ -29,7 +30,7 @@ export function BookingExperience({ showId }: { showId: string }) {
   const [busy, setBusy] = useState(false);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const ui = useSeatUI();
-  const { status } = useSession();
+  const { status } = useAppSession();
   const router = useRouter();
   const pendingHold = useRef<Promise<unknown> | null>(null);
 
@@ -45,10 +46,7 @@ export function BookingExperience({ showId }: { showId: string }) {
 
   // live seat updates (SSE, auto-reconnects)
   useEffect(() => {
-    const es = new EventSource(`/api/shows/${showId}/stream`);
-    es.addEventListener('seats', (e) => { setStates(JSON.parse((e as MessageEvent).data)); setLive(true); });
-    es.onerror = () => setLive(false);
-    return () => es.close();
+    return subscribeSeats(showId, (s) => setStates(s as SeatStateMap), setLive);
   }, [showId]);
 
   // reconcile: if one of my seats got taken (or my hold expired), drop it locally
@@ -99,12 +97,12 @@ export function BookingExperience({ showId }: { showId: string }) {
 
   const proceed = async () => {
     if (!ui.selected.length) return;
-    if (status !== 'authenticated') { router.push(`/login?next=${encodeURIComponent(`/book/${showId}`)}`); return; }
+    if (status !== 'authenticated') { router.push(routes.login(routes.book(showId))); return; }
     setBusy(true);
     try {
       if (pendingHold.current) await pendingHold.current;
       const r = await api<{ bookingId: string }>('/api/bookings', { method: 'POST', json: { showId } });
-      router.push(`/checkout/${r.bookingId}`);
+      router.push(routes.checkout(r.bookingId));
     } catch (e) { toast('error', (e as Error).message); setBusy(false); }
   };
 
@@ -124,7 +122,7 @@ export function BookingExperience({ showId }: { showId: string }) {
       <div className="container-x">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <Link href={`/movies/${movie.slug}#showtimes`} className="text-xs text-white/50 hover:text-white">← {movie.title}</Link>
+            <Link href={routes.movie(movie.slug, '#showtimes')} className="text-xs text-white/50 hover:text-white">← {movie.title}</Link>
             <h1 className="mt-1 font-display text-2xl font-bold sm:text-3xl">{theatre.name} <span className="text-white/40">· {screen.name}</span></h1>
             <p className="mt-1 text-sm text-white/55">{fmtDate(show.startsAt, { weekday: 'long', day: 'numeric', month: 'long' })} · {fmtTime(show.startsAt)} · {show.format} · {show.language}</p>
           </div>

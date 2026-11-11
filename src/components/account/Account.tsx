@@ -10,6 +10,7 @@ import { Poster } from '../Poster';
 import { Empty, Segmented } from '../ui/misc';
 import { MovieCard } from '../MovieCard';
 import { Button } from '../ui/Button';
+import { routes } from '@/lib/routes';
 
 type PublicUser = Omit<User, 'passwordHash'>;
 
@@ -39,7 +40,7 @@ function List({ items }: { items: BookingView[] }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {items.map(({ booking: b, movie, theatre, show, screen }) => (
-        <Link key={b.id} href={`/tickets/${b.id}`} className="glass group flex gap-4 rounded-3xl p-4 transition hover:ring-1 hover:ring-neon-violet/50 focus-ring">
+        <Link key={b.id} href={routes.ticket(b.id)} className="glass group flex gap-4 rounded-3xl p-4 transition hover:ring-1 hover:ring-neon-violet/50 focus-ring">
           <div className="h-28 w-20 shrink-0 overflow-hidden rounded-xl"><Poster movie={movie} showTitle={false} /></div>
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2"><h3 className="truncate font-display text-lg font-semibold">{movie.title}</h3>
